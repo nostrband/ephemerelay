@@ -1,8 +1,10 @@
 import { serve } from 'https://deno.land/std@0.181.0/http/server.ts';
 import { EventEmitter } from 'https://deno.land/x/event@2.0.1/mod.ts';
-import { Event, Filter, matchFilter, validateEvent, verifySignature } from 'npm:nostr-tools@^1.7.4';
+import { matchFilter, verifySignature } from 'npm:nostr-tools@^1.7.4';
+import { z } from 'https://deno.land/x/zod@v3.20.5/mod.ts';
 
-type RelayMsg = ['EVENT', Event] | ['REQ', string, Filter] | ['CLOSE', string];
+type Event = z.infer<typeof eventSchema>;
+type Filter = z.infer<typeof filterSchema>;
 type Listener = (event: Event) => void;
 
 const emitter = new EventEmitter<{ event: [Event] }>(0);
@@ -11,8 +13,15 @@ function connectStream(socket: WebSocket): void {
   const subs = new Map<string, Listener>();
 
   socket.onmessage = (e) => {
-    const msg: RelayMsg = JSON.parse(e.data);
-    console.log('Got message', msg);
+    console.log('msg', e.data);
+    const json = jsonSchema.safeParse(e.data);
+    const parsed = json.success ? relayMsgSchema.safeParse(json.data) : undefined;
+    const msg = parsed?.success ? parsed.data : undefined;
+
+    if (!msg) {
+      socket.send(JSON.stringify(['NOTICE', 'invalid: failed to parse message']));
+      return;
+    }
 
     switch (msg[0]) {
       case 'EVENT':
@@ -27,12 +36,8 @@ function connectStream(socket: WebSocket): void {
     }
 
     function handleEvent(event: Event) {
-      if (validateEvent(event) && verifySignature(event)) {
-        emitter.emit('event', event);
-        socket.send(JSON.stringify(['OK', event.id, true, '']));
-      } else {
-        socket.send(JSON.stringify(['OK', event.id, false, 'invalid: invalid']));
-      }
+      emitter.emit('event', event);
+      socket.send(JSON.stringify(['OK', event.id, true, '']));
     }
 
     function handleReq(sub: string, filter: Filter) {
@@ -77,5 +82,39 @@ function handleRequest(req: Request): Response {
   connectStream(socket);
   return response;
 }
+
+const jsonSchema = z.string().transform((value, ctx) => {
+  try {
+    return JSON.parse(value);
+  } catch (_e) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Invalid JSON' });
+    return z.NEVER;
+  }
+});
+
+const filterSchema = z.object({
+  ids: z.array(z.string()).optional(),
+  kinds: z.array(z.number()).optional(),
+  authors: z.array(z.string()).optional(),
+  since: z.number().optional(),
+  until: z.number().optional(),
+  limit: z.number().optional(),
+}).passthrough();
+
+const eventSchema = z.object({
+  id: z.string(),
+  kind: z.number(),
+  pubkey: z.string(),
+  content: z.string(),
+  tags: z.array(z.array(z.string())),
+  created_at: z.number(),
+  sig: z.string(),
+}).refine((event) => verifySignature(event));
+
+const relayMsgSchema = z.union([
+  z.tuple([z.literal('EVENT'), eventSchema]),
+  z.tuple([z.literal('REQ'), z.string(), filterSchema]),
+  z.tuple([z.literal('CLOSE'), z.string()]),
+]);
 
 serve(handleRequest, { port: 5000 });
