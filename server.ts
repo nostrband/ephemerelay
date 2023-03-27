@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.181.0/http/server.ts';
 import { EventEmitter } from 'https://deno.land/x/event@2.0.1/mod.ts';
-import { Event, Filter, matchFilter } from 'npm:nostr-tools@^1.7.4';
+import { Event, Filter, matchFilter, validateEvent, verifySignature } from 'npm:nostr-tools@^1.7.4';
 
 type RelayMsg = ['EVENT', Event] | ['REQ', string, Filter] | ['CLOSE', string];
 type Listener = (event: Event) => void;
@@ -27,8 +27,12 @@ function connectStream(socket: WebSocket): void {
     }
 
     function handleEvent(event: Event) {
-      emitter.emit('event', event);
-      socket.send(JSON.stringify(['OK', event.id, true, '']));
+      if (validateEvent(event) && verifySignature(event)) {
+        emitter.emit('event', event);
+        socket.send(JSON.stringify(['OK', event.id, true, '']));
+      } else {
+        socket.send(JSON.stringify(['OK', event.id, false, 'invalid: invalid']));
+      }
     }
 
     function handleReq(sub: string, filter: Filter) {
