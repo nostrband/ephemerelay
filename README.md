@@ -24,6 +24,53 @@ The biggest benefit is not caring about storage space, not caring about spam, an
 - Supports NIP-01, NIP-15, and NIP-20
 - There isn't a database
 
+## Local development
+
+```sh
+# Install Deno
+sudo apt install -y unzip
+curl -fsSL https://deno.land/install.sh | sh
+
+# Clone repo
+git clone https://gitlab.com/soapbox-pub/ephemerelay.git
+cd ephemerelay
+
+# Run server
+deno task dev
+```
+
+## Installation in prod
+
+```sh
+# Install Deno globally
+sudo apt install -y unzip
+curl -fsSL https://deno.land/x/install/install.sh | sudo DENO_INSTALL=/usr/local sh
+
+# Clone repo
+git clone https://gitlab.com/soapbox-pub/ephemerelay.git /opt/ephemerelay
+
+# Add systemd unit
+cp /opt/ephemerelay/installation/ephemerelay.service /etc/systemd/system/
+
+# Edit systemd unit and change the `User` and `WorkingDirectory` as needed
+nano /etc/systemd/system/ephemerelay.service
+
+# Start Ephemerelay
+systemctl enable --now ephemerelay
+
+# Install nginx
+sudo apt install -y nginx
+
+# Copy nginx config
+cp /opt/ephemerelay/installation/ephemerelay.conf /etc/nginx/sites-enabled/
+
+# Edit nginx config as needed
+nano /etc/nginx/sites-enabled/ephemerelay.conf
+
+# Reload nginx
+systemctl reload nignx
+```
+
 ## License
 
 This is free and unencumbered software released into the public domain.
