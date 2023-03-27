@@ -16,7 +16,7 @@ The biggest benefit is not caring about storage space, not caring about spam, an
 
 - TypeScript
 - Deno
-- NoDB (it's like NoSQL except there isn't a database)
+- NoDB (it's like NoSQL except there's no a database)
 
 ## Features
 
