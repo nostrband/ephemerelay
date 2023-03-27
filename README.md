@@ -2,7 +2,7 @@
 
 A Nostr relay that doesn't care about the past.
 
-Ephemerelay is a Nostr relay implemented in less than 100 lines of code. It immediately sends an [`EOSE`](https://github.com/nostr-protocol/nips/blob/master/15.md) for any filter, and then begins returning new events that match. Submitting an event works similarly - it will only be distributed to clients currently connected on that filter.
+Ephemerelay is a Nostr relay implemented in about 100 lines of code. It immediately sends an [`EOSE`](https://github.com/nostr-protocol/nips/blob/master/15.md) for any filter, and then begins returning new events that match. Submitting an event works similarly - it will only be distributed to clients currently connected on that filter.
 
 ## Why?
 
@@ -16,11 +16,11 @@ The biggest benefit is not caring about storage space, not caring about spam, an
 
 - TypeScript
 - Deno
-- NoDB (it's like NoSQL except there's no a database)
+- NoDB (it's like NoSQL except there's no database)
 
 ## Features
 
-- Less than 100 lines of code
+- About 100 lines of code
 - Supports NIP-01, NIP-15, and NIP-20
 - There isn't a database
 
