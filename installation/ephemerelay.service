@@ -1,0 +1,14 @@
+[Unit]
+Description=Ephemerelay
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=ephemerelay
+WorkingDirectory=/opt/ephemerelay
+ExecStart=/usr/local/bin/deno run -A server.ts
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
