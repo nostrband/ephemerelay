@@ -1,5 +1,6 @@
 {
   "tasks": {
+    "dev": "deno run --allow-net server.ts",
     "test": "deno test"
   },
   "lint": {
