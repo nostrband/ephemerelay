@@ -8,6 +8,17 @@ type Filter = z.infer<typeof filterSchema>;
 type Listener = (event: Event) => void;
 
 const emitter = new EventEmitter<{ event: [Event] }>(0);
+const BUFFER_TTL = 10000; // 10 sec
+
+const buffer: {e: Event, t: number}[] = []
+
+function gc() {
+  const minTm = Date.now() - BUFFER_TTL;
+  while(buffer.length > 0) {
+    if (buffer[0].t >= minTm) break;
+    buffer.shift();
+  }
+}
 
 function connectStream(socket: WebSocket): void {
   const subs = new Map<string, Listener>();
@@ -38,9 +49,18 @@ function connectStream(socket: WebSocket): void {
     function handleEvent(event: Event) {
       emitter.emit('event', event);
       socket.send(JSON.stringify(['OK', event.id, true, '']));
+
+      buffer.push({ e: event, t: Date.now() });
+      gc();
     }
 
     function handleReq(sub: string, filters: Filter[]) {
+      gc();
+      for (const b of buffer) {
+        if (matchFilters(filters, b.e))
+          socket.send(JSON.stringify(['EVENT', sub, b.e]));
+      }
+
       socket.send(JSON.stringify(['EOSE', sub]));
 
       const listener: Listener = (event) => {
