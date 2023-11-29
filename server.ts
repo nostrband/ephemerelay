@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.181.0/http/server.ts';
 import { EventEmitter } from 'https://deno.land/x/event@2.0.1/mod.ts';
-import { matchFilter, verifySignature } from 'npm:nostr-tools@^1.7.4';
+import { matchFilters, verifySignature } from 'npm:nostr-tools@^1.7.4';
 import { z } from 'https://deno.land/x/zod@v3.20.5/mod.ts';
 
 type Event = z.infer<typeof eventSchema>;
@@ -28,7 +28,7 @@ function connectStream(socket: WebSocket): void {
         handleEvent(msg[1]);
         return;
       case 'REQ':
-        handleReq(msg[1], msg[2]);
+        handleReq(msg[1], msg.slice(2));
         return;
       case 'CLOSE':
         handleClose(msg[1]);
@@ -40,11 +40,11 @@ function connectStream(socket: WebSocket): void {
       socket.send(JSON.stringify(['OK', event.id, true, '']));
     }
 
-    function handleReq(sub: string, filter: Filter) {
+    function handleReq(sub: string, filters: Filter[]) {
       socket.send(JSON.stringify(['EOSE', sub]));
 
       const listener: Listener = (event) => {
-        if (matchFilter(filter, event)) {
+        if (matchFilters(filters, event)) {
           socket.send(JSON.stringify(['EVENT', sub, event]));
         }
       };
@@ -113,7 +113,7 @@ const eventSchema = z.object({
 
 const relayMsgSchema = z.union([
   z.tuple([z.literal('EVENT'), eventSchema]),
-  z.tuple([z.literal('REQ'), z.string(), filterSchema]),
+  z.tuple([z.literal('REQ'), z.string()]).rest(filterSchema),
   z.tuple([z.literal('CLOSE'), z.string()]),
 ]);
 
